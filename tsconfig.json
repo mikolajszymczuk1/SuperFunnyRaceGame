@@ -16,5 +16,6 @@
     ]
   },
   "files": ["./main.ts"],
+  "include": ["./src/**/*", "./src/tests/**/*"],
   "exclude": ["node_modules", "dist"]
 }
