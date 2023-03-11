@@ -1,3 +1,3 @@
-import './src/scss/main.scss';
+import game from 'modules/game/game';
 
-console.log('Hello World!');
+export default game;

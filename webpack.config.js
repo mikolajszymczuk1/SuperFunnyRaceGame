@@ -47,7 +47,10 @@ const config = {
     ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.jsx', '.js', '...'],
+    extensions: ['.ts', '.js', '...'],
+    alias: {
+      'modules': path.resolve(__dirname, 'src/modules'),
+    },
   },
 };
 
