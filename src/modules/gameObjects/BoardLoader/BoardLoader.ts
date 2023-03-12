@@ -3,6 +3,10 @@ import Phaser from 'phaser';
 export default class BoardLoader {
   private map: Phaser.Tilemaps.Tilemap;
 
+  private layers: string[];
+
+  private tileset: Phaser.Tilemaps.Tileset;
+
   constructor(
     scene: Phaser.Scene,
     spritesheetKey: string,
@@ -11,14 +15,30 @@ export default class BoardLoader {
     layers: string[],
   ) {
     this.map = scene.make.tilemap({ key: mapKey });
-    const tileset = this.map.addTilesetImage(tilesetName, spritesheetKey);
+    this.layers = layers;
+    this.tileset = this.map.addTilesetImage(tilesetName, spritesheetKey);
+  }
 
-    let layer: Phaser.Tilemaps.TilemapLayer;
+  loadLayers(): Phaser.Tilemaps.TilemapLayer[] {
+    const tileLayers: Phaser.Tilemaps.TilemapLayer[] = [];
 
-    for (let i = 0; i < layers.length; i += 1) {
-      layer = this.map.createLayer(layers[i], tileset, 0, 0);
+    // Load base layers
+    for (let i = 0; i < this.layers.length; i += 1) {
+      const layer = this.map.createLayer(this.layers[i], this.tileset, 0, 0);
+      tileLayers.push(layer);
     }
 
-    layer.scale = 0.5;
+    return tileLayers;
+  }
+
+  loadSpawnPoint(): Phaser.Types.Tilemaps.TiledObject {
+    // Create spawn object
+    const [spawnPoints] = this.map.objects;
+    const [mainSpawnPoint] = spawnPoints.objects;
+    return mainSpawnPoint;
+  }
+
+  getMap(): Phaser.Tilemaps.Tilemap {
+    return this.map;
   }
 }
