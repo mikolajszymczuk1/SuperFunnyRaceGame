@@ -1,12 +1,17 @@
 import Phaser from 'phaser';
 import Game from 'modules/scenes/Game/Game';
 
-const TILE_BASE_SIZE = 64;
+const TILE_BASE_SIZE = 128;
+
+const GAME_SIZE: { width: number, height: number } = {
+  width: TILE_BASE_SIZE * 15,
+  height: TILE_BASE_SIZE * 10,
+};
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.CANVAS,
-  width: TILE_BASE_SIZE * 15,
-  height: TILE_BASE_SIZE * 10,
+  width: GAME_SIZE.width,
+  height: GAME_SIZE.height,
   physics: {
     default: 'arcade',
     arcade: {
@@ -14,6 +19,8 @@ const config: Phaser.Types.Core.GameConfig = {
     },
   },
   scene: [Game],
+  zoom: 0.5,
+  antialias: false,
 };
 
 export default config;
