@@ -16,6 +16,7 @@ export default class Rect extends Phaser.GameObjects.Rectangle {
     super(scene, x, y, width, height, fillColor);
 
     scene.add.existing(this);
+    scene.physics.add.existing(this);
     this.cursors = scene.input.keyboard.createCursorKeys();
   }
 
