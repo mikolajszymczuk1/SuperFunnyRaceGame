@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import Rect from 'modules/gameObjects/Rect';
+import Rect from 'modules/gameObjects/Rect/Rect';
 
 export default class Game extends Phaser.Scene {
   private rect: Rect;
