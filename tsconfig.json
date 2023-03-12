@@ -2,6 +2,8 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
     "module": "es6",
     "target": "es5",
     "allowJs": true,
@@ -9,13 +11,13 @@
       "node_modules/@types",
       "node_modules/phaser/types"
     ],
-    "baseUrl": "./src",
+    "baseUrl": "src",
     "sourceMap": true,
     "types": [
       "phaser"
     ]
   },
-  "files": ["./main.ts"],
-  "include": ["./src/**/*", "./src/tests/**/*"],
+  "files": ["./main.ts", "./index.d.ts"],
+  "include": ["./src/modules/**/*", "./src/assets/**/*", "./src/tests/**/*"],
   "exclude": ["node_modules", "dist"]
 }
