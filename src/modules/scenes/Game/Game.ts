@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import Rect from 'modules/gameObjects/Rect/Rect';
+import Car from 'modules/gameObjects/Car/Car';
 import BoardLoader from 'modules/gameObjects/BoardLoader/BoardLoader';
 import roads from 'assets/Roads/roadsSpritesheet.png';
 import car from 'assets/Cars/carRed.png';
@@ -8,7 +8,7 @@ import roadsData from 'assets/Roads/SuperFunnyRaceGameMap.json';
 export default class Game extends Phaser.Scene {
   readonly TILEMAP_NAME = 'SuperFunnyRaceGameMap';
 
-  private rect: Rect;
+  private car: Car;
 
   private board: BoardLoader;
 
@@ -33,7 +33,7 @@ export default class Game extends Phaser.Scene {
       width, height, x, y,
     } = this.board.loadSpawnPoint();
 
-    this.rect = new Rect(this, x + width / 2, y + height / 2);
-    this.physics.add.collider(this.rect.sprite, walls);
+    this.car = new Car(this, x + width / 2, y + height / 2, 'car');
+    this.physics.add.collider(this.car, walls);
   }
 }
