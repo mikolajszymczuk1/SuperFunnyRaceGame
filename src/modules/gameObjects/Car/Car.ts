@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 
-export default class Car extends Phaser.GameObjects.Sprite {
+export default class Car extends Phaser.Physics.Arcade.Sprite {
   // ariable to acces delta in other functions without sendeing them as method argument
   private deltaTime: number;
 
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
 
   // Turning speed fcator
-  readonly TURN_SENSITIVITY = 2;
+  readonly TURN_SENSITIVITY = 10;
 
   // 15 degrees on steering wheel is 1 degree on tires
   readonly TURN_RATIO = 15;
@@ -22,10 +22,10 @@ export default class Car extends Phaser.GameObjects.Sprite {
   private linearVelocity = 0;
 
   // Normalized direction veotor, combine it with linear velocity to get full speed vector
-  private linearDirection = Phaser.Math.Vector2.UP;
+  private linearDirection = Phaser.Math.Vector2.RIGHT;
 
   // Horse power
-  private enginePower = 100;
+  private enginePower = 900;
 
   // Mass of the car
   private carMass = 1000;
@@ -42,6 +42,7 @@ export default class Car extends Phaser.GameObjects.Sprite {
   ) {
     super(scene, pos_x, pos_y, texture, frame);
     scene.add.existing(this);
+    scene.physics.add.existing(this);
     this.cursors = scene.input.keyboard.createCursorKeys();
   }
 
@@ -70,9 +71,8 @@ export default class Car extends Phaser.GameObjects.Sprite {
     this.linearDirection.rotate((Phaser.Math.DegToRad(this.steeringAngle / 15)) * this.deltaTime);
     this.linearVelocity += this.Accelerate() * this.deltaTime;
     const vel = this.Velocity();
-
-    this.setX(this.x + vel.x * this.deltaTime);
-    this.setY(this.y + vel.y * this.deltaTime);
+    this.setVelocity(vel.x, vel.y);
+    this.setRotation(this.linearDirection.angle());
   }
 
   private TurnSteeringWheel(posAction: boolean, negAction: boolean, dt: number): number {
