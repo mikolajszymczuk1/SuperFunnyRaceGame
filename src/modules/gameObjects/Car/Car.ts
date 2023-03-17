@@ -1,13 +1,13 @@
 import Phaser from 'phaser';
 
 export default class Car extends Phaser.Physics.Arcade.Sprite {
-  // ariable to acces delta in other functions without sendeing them as method argument
+  // Variable to acces delta in other functions without sendeing them as method argument
   private deltaTime: number;
 
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
 
   // Turning speed fcator
-  readonly TURN_SENSITIVITY = 10;
+  readonly TURN_SENSITIVITY = 1;
 
   // 15 degrees on steering wheel is 1 degree on tires
   readonly TURN_RATIO = 15;
@@ -68,11 +68,13 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
       this.steeringAngle = 0;
     }
 
-    this.linearDirection.rotate((Phaser.Math.DegToRad(this.steeringAngle / 15)) * this.deltaTime);
+    this.linearDirection.rotate(Phaser.Math.DegToRad(this.AngularVelocity()) * this.deltaTime);
     this.linearVelocity += this.Accelerate() * this.deltaTime;
     const vel = this.Velocity();
     this.setVelocity(vel.x, vel.y);
     this.setRotation(this.linearDirection.angle());
+
+    this.AngularVelocity();
   }
 
   private TurnSteeringWheel(posAction: boolean, negAction: boolean, dt: number): number {
@@ -99,17 +101,17 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return radius;
   }
 
-  private AngularVelocity(): Phaser.Math.Vector2 {
+  private AngularVelocity(): number {
     const turnRadius = this.TurnRadius();
-    const linearX = this.linearVelocity * this.linearDirection.x;
-    const linearY = this.linearVelocity * this.linearDirection.y;
-    let angularVelocity = new Phaser.Math.Vector2(linearX / turnRadius, linearY / turnRadius);
+    let angularVelocity = this.linearVelocity / turnRadius;
+    // const linearX = this.linearVelocity * this.linearDirection.x;
+    // const linearY = this.linearVelocity * this.linearDirection.y;
+    // let angularVelocity = new Phaser.Math.Vector2(linearX / turnRadius, linearY / turnRadius);
 
     if (turnRadius === 0) {
-      angularVelocity = Phaser.Math.Vector2.ZERO;
+      angularVelocity = 0;
     }
 
-    angularVelocity.add(new Phaser.Math.Vector2(linearX, linearY));
     return angularVelocity;
   }
 
