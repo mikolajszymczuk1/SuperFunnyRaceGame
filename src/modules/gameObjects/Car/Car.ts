@@ -52,12 +52,12 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     const leftKeyDown = this.cursors.left.isDown;
     const rightKeyDown = this.cursors.right.isDown;
 
-    const changeBy = this.TurnSteeringWheel(leftKeyDown, rightKeyDown, delta);
+    const changeBy = this.turnSteeringWheel(leftKeyDown, rightKeyDown, delta);
     if (changeBy === 0) {
       this.steeringAngle = 0;
     }
 
-    this.steeringAngle += this.TurnSteeringWheel(leftKeyDown, rightKeyDown, delta);
+    this.steeringAngle += this.turnSteeringWheel(leftKeyDown, rightKeyDown, delta);
     this.steeringAngle = Phaser.Math.Clamp(
       this.steeringAngle,
       -this.MAX_STEERING_ANGLE,
@@ -68,16 +68,15 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
       this.steeringAngle = 0;
     }
 
-    this.linearDirection.rotate(Phaser.Math.DegToRad(this.AngularVelocity()) * this.deltaTime);
-    this.linearVelocity += this.Accelerate() * this.deltaTime;
-    const vel = this.Velocity();
+    this.linearDirection.rotate(Phaser.Math.DegToRad(this.angularVelocity()) * this.deltaTime);
+    this.linearVelocity += this.accelerate() * this.deltaTime;
+    const vel = this.velocity();
     this.setVelocity(vel.x, vel.y);
     this.setRotation(this.linearDirection.angle());
-
-    this.AngularVelocity();
   }
 
-  private TurnSteeringWheel(posAction: boolean, negAction: boolean, dt: number): number {
+  /** TODO: Add comment here */
+  private turnSteeringWheel(posAction: boolean, negAction: boolean, dt: number): number {
     const LEFT = -1;
     const RIGHT = 1;
 
@@ -91,8 +90,8 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return angleDelta;
   }
 
-  // Angular velocity methfos needs some rethink and better implementation
-  private TurnRadius(): number {
+  /** Angular velocity methfos needs some rethink and better implementation */
+  private turnRadius(): number {
     const theta = Phaser.Math.DegToRad(this.steeringAngle / this.TURN_RATIO);
     let radius = this.wheelbase / Math.sin(theta);
     if (radius === Infinity) {
@@ -101,8 +100,9 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return radius;
   }
 
-  private AngularVelocity(): number {
-    const turnRadius = this.TurnRadius();
+  /** TODO: Add comment here */
+  private angularVelocity(): number {
+    const turnRadius = this.turnRadius();
     let angularVelocity = this.linearVelocity / turnRadius;
     // const linearX = this.linearVelocity * this.linearDirection.x;
     // const linearY = this.linearVelocity * this.linearDirection.y;
@@ -115,8 +115,8 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return angularVelocity;
   }
 
-  // Workd flawlessly
-  private Accelerate(): number {
+  /** Workd flawlessly */
+  private accelerate(): number {
     const G = 9.81;
     const HP_TO_WATTS = 746;
     const airDensity = 1.225;
@@ -147,8 +147,8 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return acceleration;
   }
 
-  // Helper function
-  private Velocity(): Phaser.Math.Vector2 {
+  /** Helper function */
+  private velocity(): Phaser.Math.Vector2 {
     const velocity = new Phaser.Math.Vector2(
       this.linearDirection.x * this.linearVelocity,
       this.linearDirection.y * this.linearVelocity,
