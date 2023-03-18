@@ -56,6 +56,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.cursors = scene.input.keyboard.createCursorKeys();
+    this.setCollideWorldBounds(true);
   }
 
   protected preUpdate(time: number, delta: number): void {
