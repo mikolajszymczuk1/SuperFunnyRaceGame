@@ -7,13 +7,16 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
 
   // Turning speed fcator
-  readonly TURN_SENSITIVITY = 1;
+  readonly TURN_SENSITIVITY = 10;
 
   // 15 degrees on steering wheel is 1 degree on tires
-  readonly TURN_RATIO = 15;
+  readonly TURN_RATIO = 3;
 
   // Maximum steering wheel angle
-  readonly MAX_STEERING_ANGLE = 1080;
+  readonly MAX_STEERING_ANGLE = 180;
+
+  // Angle that dont make efefct on steering
+  readonly DEAD_ZONE = 0;
 
   // Steering wheel angle, deg
   private steeringAngle = 0;
@@ -24,14 +27,18 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
   // Normalized direction veotor, combine it with linear velocity to get full speed vector
   private linearDirection = Phaser.Math.Vector2.RIGHT;
 
+  private lateralDirection = Phaser.Math.Vector2.RIGHT;
+
   // Horse power
-  private enginePower = 900;
+  private enginePower = 100;
 
   // Mass of the car
-  private carMass = 1000;
+  private carMass = 1200;
 
   // Distance between front and rear axle (L)
-  private wheelbase = 1; // m
+  private wheelbase = 1.4; // m
+
+  private tireAngleDeg = (): number => this.steeringAngle / this.TURN_RATIO;
 
   constructor(
     scene: Phaser.Scene,
@@ -49,44 +56,45 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
   protected preUpdate(time: number, delta: number): void {
     this.deltaTime = delta / 1000;
 
-    const leftKeyDown = this.cursors.left.isDown;
-    const rightKeyDown = this.cursors.right.isDown;
+    this.moveCar();
+  }
 
-    const changeBy = this.turnSteeringWheel(leftKeyDown, rightKeyDown, delta);
-    if (changeBy === 0) {
-      this.steeringAngle = 0;
-    }
+  public moveCar(): void {
+    const isSteerLeftDown = this.cursors.left.isDown;
+    const isSteerRightDown = this.cursors.right.isDown;
 
-    this.steeringAngle += this.turnSteeringWheel(leftKeyDown, rightKeyDown, delta);
     this.steeringAngle = Phaser.Math.Clamp(
       this.steeringAngle,
       -this.MAX_STEERING_ANGLE,
       this.MAX_STEERING_ANGLE,
     );
 
-    if (Phaser.Math.Within(this.steeringAngle, 0, 10)) {
-      this.steeringAngle = 0;
-    }
+    this.steeringAngle += this.turnSteeringWheel(isSteerRightDown, isSteerLeftDown);
+    const turnDirection = this.steeringAngle < 0 ? 1 : -1;
 
     this.linearDirection.rotate(Phaser.Math.DegToRad(this.angularVelocity()) * this.deltaTime);
     this.linearVelocity += this.accelerate() * this.deltaTime;
-    const vel = this.velocity();
-    this.setVelocity(vel.x, vel.y);
-    this.setRotation(this.linearDirection.angle());
+
+    this.lateralDirection = this.linearDirection.clone().rotate(
+      Phaser.Math.DegToRad(-90 * turnDirection * this.lateralForce()),
+    );
+
+    const velocity = this.velocity();
+    this.setVelocity(velocity.x, velocity.y);
+    this.setRotation(velocity.angle());
   }
 
   /** TODO: Add comment here */
-  private turnSteeringWheel(posAction: boolean, negAction: boolean, dt: number): number {
-    const LEFT = -1;
-    const RIGHT = 1;
+  private turnSteeringWheel(posAction: boolean, negAction: boolean): number {
+    let sensitivity = this.TURN_SENSITIVITY;
 
-    let turnDirection = -Number(posAction) + Number(negAction);
+    const turnDirection = Number(posAction) - Number(negAction);
+    let angleDelta = sensitivity * turnDirection;
+
     if (turnDirection === 0 && this.steeringAngle !== 0) {
-      const sign = this.steeringAngle < 0 ? LEFT : RIGHT;
-      turnDirection = sign * -1;
-      turnDirection = 0;
+      sensitivity /= 1;
+      angleDelta = Phaser.Math.Linear(-this.steeringAngle / sensitivity, 0, this.deltaTime);
     }
-    const angleDelta = this.TURN_SENSITIVITY * turnDirection * dt;
     return angleDelta;
   }
 
@@ -104,9 +112,6 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
   private angularVelocity(): number {
     const turnRadius = this.turnRadius();
     let angularVelocity = this.linearVelocity / turnRadius;
-    // const linearX = this.linearVelocity * this.linearDirection.x;
-    // const linearY = this.linearVelocity * this.linearDirection.y;
-    // let angularVelocity = new Phaser.Math.Vector2(linearX / turnRadius, linearY / turnRadius);
 
     if (turnRadius === 0) {
       angularVelocity = 0;
@@ -115,13 +120,44 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return angularVelocity;
   }
 
-  /** Workd flawlessly */
+  private tireCornerringStiffness(): number {
+    const B = 0.7;
+    const C = 0.9;
+    const D = 0.95;
+    const E = 0.097;
+
+    const a = this.tireSlipAngle();
+
+    const stiffnes = D * Math.sin(
+      C * Math.atan(
+        B * a - E * (
+          B * a - Math.atan(B * a)
+        ),
+      ),
+    );
+    return stiffnes;
+  }
+
+  private tireSlipAngle(): number {
+    const angle = Math.atan(this.angularVelocity() / this.linearVelocity);
+    return angle;
+  }
+
+  private lateralForce(): number {
+    const tireStiffness = this.tireCornerringStiffness();
+    const slipAngle = this.tireSlipAngle();
+
+    const lateralForce = -tireStiffness * slipAngle;
+    return lateralForce;
+  }
+
+  /** Works flawlessly */
   private accelerate(): number {
     const G = 9.81;
     const HP_TO_WATTS = 746;
     const airDensity = 1.225;
-    const friction = 0.8;
-    const dragCoefficient = 10;
+    const friction = 0.75;
+    const dragCoefficient = 0.45;
     const absVelocity = Math.abs(this.linearVelocity);
     const velocitySquared = this.linearVelocity ** 2;
 
@@ -134,7 +170,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
 
     let brakingForce = 0;
     if (this.cursors.down.isDown && absVelocity > 0) {
-      brakingForce = 10e4 * friction;
+      brakingForce = 10e5 * friction;
     }
 
     const forceApplied = engineForce - (frictionForce + airResistance + brakingForce);
@@ -149,10 +185,23 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
 
   /** Helper function */
   private velocity(): Phaser.Math.Vector2 {
-    const velocity = new Phaser.Math.Vector2(
-      this.linearDirection.x * this.linearVelocity,
-      this.linearDirection.y * this.linearVelocity,
+    const linear = new Phaser.Math.Vector2(
+      this.linearDirection.x,
+      this.linearDirection.y,
     );
-    return velocity;
+
+    const lateral = new Phaser.Math.Vector2(
+      this.lateralDirection.x,
+      this.lateralDirection.y,
+    );
+
+    const resultant = new Phaser.Math.Vector2(
+      linear.x + lateral.x,
+      linear.y + lateral.y,
+    ).normalize();
+
+    resultant.x *= this.linearVelocity;
+    resultant.y *= this.linearVelocity;
+    return resultant;
   }
 }
