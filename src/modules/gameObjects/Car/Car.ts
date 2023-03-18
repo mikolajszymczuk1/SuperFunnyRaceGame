@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import EnvironmentEnum from 'modules/enums/EnvironmentEnum';
 
 export default class Car extends Phaser.Physics.Arcade.Sprite {
   // Variable to acces delta in other functions without sendeing them as method argument
@@ -18,6 +19,12 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
   // Angle that dont make efefct on steering
   readonly DEAD_ZONE = 0;
 
+  // Left direction
+  readonly LEFT = -1;
+
+  // Right direction
+  readonly RIGHT = 1;
+
   // Steering wheel angle, deg
   private steeringAngle = 0;
 
@@ -36,9 +43,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
   private carMass = 1200;
 
   // Distance between front and rear axle (L)
-  private wheelbase = 1.4; // m
-
-  private tireAngleDeg = (): number => this.steeringAngle / this.TURN_RATIO;
+  private wheelbase = 2;
 
   constructor(
     scene: Phaser.Scene,
@@ -59,6 +64,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     this.moveCar();
   }
 
+  /** TODO: Add comment here */
   public moveCar(): void {
     const isSteerLeftDown = this.cursors.left.isDown;
     const isSteerRightDown = this.cursors.right.isDown;
@@ -81,7 +87,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
 
     const velocity = this.velocity();
     this.setVelocity(velocity.x, velocity.y);
-    this.setRotation(velocity.angle());
+    this.setRotation(this.linearDirection.angle());
   }
 
   /** TODO: Add comment here */
@@ -105,6 +111,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     if (radius === Infinity) {
       radius = 0;
     }
+
     return radius;
   }
 
@@ -120,6 +127,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return angularVelocity;
   }
 
+  /** TODO: Add comment here */
   private tireCornerringStiffness(): number {
     const B = 0.7;
     const C = 0.9;
@@ -138,11 +146,13 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     return stiffnes;
   }
 
+  /** TODO: Add comment here */
   private tireSlipAngle(): number {
     const angle = Math.atan(this.angularVelocity() / this.linearVelocity);
     return angle;
   }
 
+  /** TODO: Add comment here */
   private lateralForce(): number {
     const tireStiffness = this.tireCornerringStiffness();
     const slipAngle = this.tireSlipAngle();
@@ -153,24 +163,21 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
 
   /** Works flawlessly */
   private accelerate(): number {
-    const G = 9.81;
-    const HP_TO_WATTS = 746;
-    const airDensity = 1.225;
-    const friction = 0.75;
     const dragCoefficient = 0.45;
     const absVelocity = Math.abs(this.linearVelocity);
     const velocitySquared = this.linearVelocity ** 2;
 
     let engineForce = 0;
     if (this.cursors.up.isDown) {
-      engineForce = this.enginePower * HP_TO_WATTS;
+      engineForce = this.enginePower * EnvironmentEnum.HP_TO_WATTS;
     }
-    const frictionForce = friction * this.carMass * G;
-    const airResistance = (airDensity * dragCoefficient * velocitySquared) / 2;
+
+    const frictionForce = EnvironmentEnum.ROAD_FRICTION * this.carMass * EnvironmentEnum.G;
+    const airResistance = (EnvironmentEnum.AIR_DENSITY * dragCoefficient * velocitySquared) / 2;
 
     let brakingForce = 0;
     if (this.cursors.down.isDown && absVelocity > 0) {
-      brakingForce = 10e5 * friction;
+      brakingForce = 10e5 * EnvironmentEnum.ROAD_FRICTION;
     }
 
     const forceApplied = engineForce - (frictionForce + airResistance + brakingForce);
@@ -180,6 +187,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
       this.linearVelocity = 0;
       acceleration = 0;
     }
+
     return acceleration;
   }
 
