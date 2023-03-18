@@ -22,5 +22,6 @@ module.exports = {
     'plugin:@typescript-eslint/recommended'
   ],
   rules: {
+    'import/no-named-as-default': 'off',
   },
 };
