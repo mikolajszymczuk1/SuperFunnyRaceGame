@@ -12,6 +12,10 @@ export default class Game extends Phaser.Scene {
 
   private board: BoardLoader;
 
+  private isOnTrack: boolean;
+
+  private isOnTrackText: Phaser.GameObjects.Text;
+
   constructor() {
     super('game');
   }
@@ -24,9 +28,13 @@ export default class Game extends Phaser.Scene {
 
   create(): void {
     // Create board and load layers
-    this.board = new BoardLoader(this, 'roads', 'SuperFunnyRaceGameMap', 'roadsMap', ['Grass', 'Walls', 'Roads']);
-    const [grass, walls, main] = this.board.loadLayers();
-    walls.setCollisionByExclusion([-1]);
+    const tilesets = [{ tilesetName: 'roadsSpritesheet', spritesheetKey: 'roads' }];
+    const layers = ['Grass', 'Roads'];
+    this.board = new BoardLoader(this, tilesets, 'roadsMap', layers);
+    const [grassLayer, roadsLayer] = this.board.loadLayers();
+
+    // Debug texts
+    this.isOnTrackText = this.add.text(25, 25, '', { fontFamily: 'Arial', color: '#000000', fontSize: '35px' });
 
     // Load car span point
     const {
@@ -34,6 +42,14 @@ export default class Game extends Phaser.Scene {
     } = this.board.loadSpawnPoint();
 
     this.car = new Car(this, x + width / 2, y + height / 2, 'car');
-    this.physics.add.collider(this.car, walls);
+    this.physics.add.overlap(this.car, roadsLayer, (carPlayer, roadTile) => this.checkIfOffRoad(carPlayer, roadTile));
+  }
+
+  checkIfOffRoad(carPlayer: any, roadTile: any): void {
+    if (roadTile.index !== -1) {
+      this.isOnTrackText.text = 'Is on track: true';
+    } else {
+      this.isOnTrackText.text = 'Is on track: false';
+    }
   }
 }

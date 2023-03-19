@@ -23,5 +23,7 @@ module.exports = {
   ],
   rules: {
     'import/no-named-as-default': 'off',
+    'max-len': ['error', { 'code': 120 }],
+    'class-methods-use-this': 'off',
   },
 };

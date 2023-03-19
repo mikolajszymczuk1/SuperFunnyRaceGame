@@ -1,22 +1,21 @@
 import Phaser from 'phaser';
+import TilesetConf from 'modules/types/TilesetConf';
 
 export default class BoardLoader {
   private map: Phaser.Tilemaps.Tilemap;
 
-  private layers: string[];
+  private layers: string[] = [];
 
-  private tileset: Phaser.Tilemaps.Tileset;
+  private tilesets: Phaser.Tilemaps.Tileset[] = [];
 
-  constructor(
-    scene: Phaser.Scene,
-    spritesheetKey: string,
-    tilesetName: string,
-    mapKey: string,
-    layers: string[],
-  ) {
+  constructor(scene: Phaser.Scene, tilesets: TilesetConf[], mapKey: string, layers: string[]) {
     this.map = scene.make.tilemap({ key: mapKey });
     this.layers = layers;
-    this.tileset = this.map.addTilesetImage(tilesetName, spritesheetKey);
+
+    // Generate tileset based on tilests array
+    tilesets.forEach((singleTileset) => {
+      this.tilesets.push(this.map.addTilesetImage(singleTileset.tilesetName, singleTileset.spritesheetKey));
+    });
   }
 
   loadLayers(): Phaser.Tilemaps.TilemapLayer[] {
@@ -24,7 +23,7 @@ export default class BoardLoader {
 
     // Load base layers
     for (let i = 0; i < this.layers.length; i += 1) {
-      const layer = this.map.createLayer(this.layers[i], this.tileset, 0, 0);
+      const layer = this.map.createLayer(this.layers[i], this.tilesets, 0, 0);
       tileLayers.push(layer);
     }
 
