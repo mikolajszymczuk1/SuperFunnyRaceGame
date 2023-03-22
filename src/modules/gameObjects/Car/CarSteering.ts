@@ -45,24 +45,36 @@ export default class CarSteering {
    * @param dt delta time
    */
   public update(dt: number): void {
-    this.wheelAngle += this.wheelInputDelta() * dt;
+    // this.wheelAngle += this.wheelInputDelta() * dt;
+    this.wheelInputDelta();
     this.clampWheelAngle();
     this.updateTireAngle();
   }
 
   /**
+   * changed for testing purposes, will set to max possible amount
    * @returns by how much wheel angle will change with given input
    */
   private wheelInputDelta(): number {
+    // const axis = this.inputController.getAxis();
+    // let angleDelta: number;
+    // if (axis === 0 && this.wheelAngle !== CarConfigEnum.DEAD_ZONE) {
+    //   const CENTER_ANGLE = 0;
+    //   angleDelta = Phaser.Math.Linear(-this.wheelAngle, CENTER_ANGLE, this.wheelReturnSpeed);
+    // } else {
+    //   angleDelta = axis * CarConfigEnum.TURN_SENSITIVITY;
+    // }
+    // return angleDelta;
+
     const axis = this.inputController.getAxis();
-    let angleDelta: number;
-    if (axis === 0 && this.wheelAngle !== CarConfigEnum.DEAD_ZONE) {
-      const CENTER_ANGLE = 0;
-      angleDelta = Phaser.Math.Linear(-this.wheelAngle, CENTER_ANGLE, this.wheelReturnSpeed);
-    } else {
-      angleDelta = axis * CarConfigEnum.TURN_SENSITIVITY;
+    if (axis === 0) {
+      this.wheelAngle = 0;
+    } else if (axis === -1) {
+      this.wheelAngle = -CarConfigEnum.MAX_WHEEL_ANGLE;
+    } else if (axis === 1) {
+      this.wheelAngle = CarConfigEnum.MAX_WHEEL_ANGLE;
     }
-    return angleDelta;
+    return this.wheelAngle;
   }
 
   /**

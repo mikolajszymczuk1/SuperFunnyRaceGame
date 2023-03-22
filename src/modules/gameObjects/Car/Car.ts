@@ -33,7 +33,7 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     this.cursors = scene.input.keyboard.createCursorKeys();
 
     this.carSteeringController = new CarInputController(this.cursors);
-    this.carEngine = new CarEngine(240);
+    this.carEngine = new CarEngine(200);
     this.carSteering = new CarSteering(0.016, this.carSteeringController);
     this.carPhysics = new CarPhysics(
       Phaser.Math.Vector2.RIGHT,
@@ -48,8 +48,10 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     this.deltaTime = delta / 1000;
 
     this.carSteering.update(this.deltaTime);
-    const velocity = this.carPhysics.updateVelocity(this.deltaTime);
+    this.carPhysics.update(this.deltaTime);
+
+    const velocity = this.carPhysics.getVelocity();
     this.setVelocity(velocity.x, velocity.y);
-    this.setAngle(Phaser.Math.RadToDeg(this.carPhysics.getCarDirection().angle()));
+    this.setAngle(Phaser.Math.RadToDeg(this.carPhysics.carDirection.angle()));
   }
 }

@@ -13,58 +13,24 @@ export default class CarPhysics {
   private carSteering: CarSteering;
 
   /**
-   * Directtion the car is heading, same as acceleration direction
+   * Direction at which car is heading, determines diirections of all other forces
    */
   public carDirection: Phaser.Math.Vector2;
 
-  private velocity: Phaser.Math.Vector2;
+  /**
+   * Velocity at which tire s traveling
+   */
+  private tireVelocity: Phaser.Math.Vector2;
 
   /**
-   * Acceleration direction
+   * Velocity at which car traveling
    */
-  private accelerationDir: Phaser.Math.Vector2;
+  private carVelocity: Phaser.Math.Vector2;
 
   /**
-   * Acceleration length in SI
+   * Net velocity
    */
-  private accelerationFactor: number;
-
-  /**
-   * Force of friction
-   */
-  private frictionDir: Phaser.Math.Vector2;
-
-  /**
-   * Friction factor
-   */
-  private frictionFactor: number;
-
-  /**
-   * Drag Force
-   */
-  private dragDir: Phaser.Math.Vector2;
-
-  /**
-   * Drag factor
-   */
-  private dragFactor: number;
-
-  /**
-   * Centripetal force
-   */
-  private centripetalDir: Phaser.Math.Vector2;
-
-  /**
-   * Centripetal factor
-   */
-  private centripetalFactor: number;
-
-  /**
-   * lateral slip force
-   */
-  private lateralDir: Phaser.Math.Vector2;
-
-  private lateralFactor: number;
+  private netVelocity: Phaser.Math.Vector2;
 
   constructor(
     upVector: Phaser.Math.Vector2,
@@ -73,127 +39,149 @@ export default class CarPhysics {
     inputController: CarInputController,
   ) {
     this.carDirection = upVector;
-    this.accelerationDir = this.carDirection.clone().rotate(0);
-    this.frictionDir = this.carDirection.clone().rotate(Math.PI);
-    this.dragDir = this.carDirection.clone().rotate(Math.PI);
-    this.centripetalDir = this.carDirection.clone().rotate(Math.PI / 2);
-    this.lateralDir = this.carDirection.clone().rotate(-Math.PI / 2);
 
-    this.velocity = Phaser.Math.Vector2.ZERO.clone();
-
-    this.carEngine = carEngine;
-    this.carSteering = carSteering;
+    this.carVelocity = new Phaser.Math.Vector2(0, 0);
+    this.tireVelocity = new Phaser.Math.Vector2(0, 0);
 
     this.inputController = inputController;
+    this.carEngine = carEngine;
+    this.carSteering = carSteering;
   }
 
   public getCarDirection(): Phaser.Math.Vector2 {
     return this.carDirection;
   }
 
-  public updateVelocity(dt: number): Phaser.Math.Vector2 {
-    this.updateCarRotattion();
+  public getVelocity(): Phaser.Math.Vector2 {
+    // return this.netVelocity;
+    return this.carVelocity;
+  }
 
-    const velocity = this.netForce().scale(1 / CarConfigEnum.CAR_MASS);
-    this.velocity = velocity;
+  public update(deltaTime: number) {
+    // this.tireVelocity.add(this.netForce().scale(deltaTime));
+    // this.carVelocity = this.tireVelocity.clone().add(this.carVelocity);
+    // this.carDirection = Phaser.Math.Vector2.RIGHT;
+    if (this.angularForce().length() !== 0) {
+      this.carDirection.rotate(this.angularForce()
+        .angle() * deltaTime * this.inputController.getAxis());
+    }
 
-    return this.velocity;
+    this.carVelocity.add(this.netForce().scale(deltaTime));
+
+    // console.log(this.carDirection);
+    // console.log(this.carVelocity.length());
+    // console.log(this.angularForce().angle());
   }
 
   public netForce(): Phaser.Math.Vector2 {
-    const accelerationForce = this.accelerationForce();
-    const frictionForce = this.frictionForce();
-    const dragForce = this.dragForce();
-    const centripetalForce = this.centripetalForce();
-    const lateralForce = this.lateralForce();
+    const netForce = this.appliedForce()
+      .add(this.frictionForce())
+      .add(this.dragForce());
 
-    let netForce = new Phaser.Math.Vector2(0, 0);
-    if (this.inputController.isAccelerating()) {
-      netForce.add(accelerationForce);
-      netForce.add(frictionForce);
-      netForce.add(dragForce);
-      netForce.add(centripetalForce);
-      netForce.add(lateralForce);
-    } else if (this.inputController.isIdling()) {
-      netForce.add(frictionForce);
-      netForce.add(dragForce);
-      netForce.add(centripetalForce);
-      netForce.add(lateralForce);
-      if (Phaser.Math.Fuzzy.Equal(this.velocity.angle(), this.dragDir.angle(), 0.5)
-      || this.velocity.length() === 0) {
-        this.velocity = Phaser.Math.Vector2.ZERO;
-        netForce = Phaser.Math.Vector2.ZERO;
-      }
-    }
-    return netForce;
-  }
-
-  private updateCarRotattion(): void {
-    this.carDirection.rotate(this.carSteering.getTireAngleRad());
+    const velocity = this.carVelocity.clone().add(netForce.scale(1 / CarConfigEnum.CAR_MASS));
+    return velocity;
   }
 
   /**
-   * Combines direciton with factor to get acceleration vector,
-   * also updates directional and factor params
+   * Car is accelerating correspondingly to tire direction
    * @returns Acceleration force
    */
-  private accelerationForce(): Phaser.Math.Vector2 {
-    this.accelerationDir.setAngle(this.carDirection.angle());
-    this.accelerationFactor = this.carEngine.getEngineForce();
+  private appliedForce(): Phaser.Math.Vector2 {
+    const direction = this.carDirection.clone();
+    // this.carDirection.clone().rotate(
+    //   this.carSteering.getTireAngleRad(),
+    // );
+    let factor = 0;
 
-    const accelerationForce = this.accelerationDir.clone().scale(this.accelerationFactor);
-    return accelerationForce;
+    if (this.inputController.isAccelerating()) {
+      factor = this.carEngine.getEngineForce();
+    } else if (this.inputController.isIdling()) {
+      factor = 0;
+    } else if (this.inputController.isBraking()) {
+      factor = -10e3;
+    }
+
+    const appliedVector = direction.scale(factor);
+    return appliedVector;
   }
 
   private frictionForce(): Phaser.Math.Vector2 {
-    this.frictionDir.setAngle(this.carDirection.angle() + Math.PI);
-    this.frictionFactor = EnvironmentEnum.ROAD_FRICTION * CarPhysics.normalForce();
+    const direction = this.carVelocity.clone().rotate(
+      Math.PI,
+    );
 
-    const frictionForce = this.frictionDir.clone().scale(this.frictionFactor);
-    return frictionForce;
+    const normalForce = CarPhysics.normalForce();
+
+    const frictionVector = direction.scale(normalForce * EnvironmentEnum.ROAD_FRICTION);
+    return frictionVector;
   }
 
   private dragForce(): Phaser.Math.Vector2 {
-    this.dragDir.setAngle(this.carDirection.angle() + Math.PI);
-    const rho = EnvironmentEnum.AIR_DENSITY;
-    const vSquared = this.velocity.dot(this.velocity);
-    const cDrag = CarConfigEnum.DRAG_COEFFICIENT;
-    this.dragFactor = (rho * vSquared * cDrag) / 2;
+    const direction = this.carVelocity.clone().rotate(
+      Math.PI,
+    );
 
-    const dragForce = this.dragDir.clone().scale(this.dragFactor);
-    return dragForce;
+    const rho = EnvironmentEnum.AIR_DENSITY;
+    const vSquared = this.carVelocity.clone().dot(this.carVelocity);
+    const cr = CarConfigEnum.DRAG_COEFFICIENT;
+
+    const factor = (rho * vSquared * cr) / 2;
+    const dragVector = direction.scale(factor);
+    return dragVector;
   }
 
   private centripetalForce(): Phaser.Math.Vector2 {
-    this.centripetalDir.setAngle(this.carDirection.angle() + Math.PI / 2);
-    const vSquared = this.velocity.dot(this.velocity);
+    const direction = this.carVelocity.clone()
+      .rotate((Math.PI / 2) * this.inputController.getAxis());
+    const vSquared = this.carVelocity.clone().dot(this.carVelocity);
     const turnRadius = this.turnRadius();
-    this.centripetalFactor = (CarConfigEnum.CAR_MASS * vSquared) / turnRadius;
-    if (turnRadius === Infinity || turnRadius === -Infinity) {
-      this.centripetalFactor = 0;
-    }
 
-    const centripetalForce = this.centripetalDir.clone().scale(this.centripetalFactor);
-    return centripetalForce;
+    if (turnRadius === Infinity) {
+      return direction.scale(0);
+    }
+    const factor = (CarConfigEnum.CAR_MASS * vSquared) / turnRadius;
+    const centripetalVector = direction.scale(factor);
+    return centripetalVector;
+  }
+
+  private centrifugalForce(): Phaser.Math.Vector2 {
+    const centrifugalVector = this.centripetalForce().clone().rotate(Math.PI);
+    return centrifugalVector;
   }
 
   private lateralForce(): Phaser.Math.Vector2 {
-    this.lateralDir.setAngle(this.carDirection.angle() - Math.PI / 2);
+    const direction = this.carVelocity.clone()
+      .rotate((Math.PI / 2) * this.inputController.getAxis());
     const normalForce = CarPhysics.normalForce();
-    const theta = Math.atan2(this.velocity.y, this.velocity.x);
-    this.lateralFactor = EnvironmentEnum.ROAD_FRICTION * normalForce * Math.tan(theta);
+    const theta = Math.atan2(this.carVelocity.y, this.carVelocity.x);
+    return direction.scale(EnvironmentEnum.ROAD_FRICTION * normalForce * Math.tan(theta));
+  }
 
-    const lateralForce = this.lateralDir.clone().scale(this.lateralFactor);
-    return lateralForce;
+  private angularForce(): Phaser.Math.Vector2 {
+    const direction = this.carVelocity.clone()
+      .rotate((Math.PI / 2) * this.inputController.getAxis());
+    let factor = this.carVelocity.clone().length() / this.turnRadius();
+
+    if (this.turnRadius() === Infinity) {
+      factor = 0;
+    }
+
+    const angularVector = direction.scale(factor);
+    return angularVector;
   }
 
   private turnRadius(): number {
-    const vSquared = this.velocity.dot(this.velocity);
+    const vSquared = this.carVelocity.dot(this.carVelocity);
     const lateralAcceleration = this.lateralForce().length() / CarConfigEnum.CAR_MASS;
-
     const turnRadius = vSquared / lateralAcceleration;
+    // if (turnRadius < CarConfigEnum.WHEELBASE || this.inputController.getAxis() === 0) {
+    //   turnRadius = Infinity;
+    // }
     return turnRadius;
-    // return CarConfigEnum.WHEELBASE / Math.sin(this.carSteering.getTireAngleRad());
+    // const theta = this.carSteering.getTireAngleRad();
+    // const turnRadius = 1 / Math.sin(theta);
+    // console.log(turnRadius);
+    // return turnRadius;
   }
 
   static normalForce(): number {

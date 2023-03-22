@@ -7,7 +7,7 @@ enum CarConfigEnum {
   // TODO: add rest of car constant
   CAR_MASS = 1200,
   WHEELBASE = 2,
-  DRAG_COEFFICIENT = 0.95,
+  DRAG_COEFFICIENT = 1.95,
 }
 
 export default CarConfigEnum;
