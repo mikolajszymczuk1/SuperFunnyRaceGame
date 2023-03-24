@@ -46,7 +46,7 @@ export default class CarSteering {
    */
   public update(dt: number): void {
     // this.wheelAngle += this.wheelInputDelta() * dt;
-    this.wheelInputDelta();
+    this.wheelInputDelta(dt);
     this.clampWheelAngle();
     this.updateTireAngle();
   }
@@ -55,7 +55,7 @@ export default class CarSteering {
    * changed for testing purposes, will set to max possible amount
    * @returns by how much wheel angle will change with given input
    */
-  private wheelInputDelta(): number {
+  private wheelInputDelta(deltaTime: number): number {
     // const axis = this.inputController.getAxis();
     // let angleDelta: number;
     // if (axis === 0 && this.wheelAngle !== CarConfigEnum.DEAD_ZONE) {
@@ -70,9 +70,9 @@ export default class CarSteering {
     if (axis === 0) {
       this.wheelAngle = 0;
     } else if (axis === -1) {
-      this.wheelAngle = -CarConfigEnum.MAX_WHEEL_ANGLE;
+      this.wheelAngle = -CarConfigEnum.MAX_WHEEL_ANGLE * deltaTime;
     } else if (axis === 1) {
-      this.wheelAngle = CarConfigEnum.MAX_WHEEL_ANGLE;
+      this.wheelAngle = CarConfigEnum.MAX_WHEEL_ANGLE * deltaTime;
     }
     return this.wheelAngle;
   }

@@ -33,8 +33,8 @@ export default class Car extends Phaser.Physics.Arcade.Sprite {
     this.cursors = scene.input.keyboard.createCursorKeys();
 
     this.carSteeringController = new CarInputController(this.cursors);
-    this.carEngine = new CarEngine(200);
-    this.carSteering = new CarSteering(0.016, this.carSteeringController);
+    this.carEngine = new CarEngine(240);
+    this.carSteering = new CarSteering(this.deltaTime, this.carSteeringController);
     this.carPhysics = new CarPhysics(
       Phaser.Math.Vector2.RIGHT,
       this.carEngine,

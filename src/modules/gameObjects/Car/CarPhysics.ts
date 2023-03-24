@@ -8,6 +8,8 @@ import CarEngine from './CarEngine';
 export default class CarPhysics {
   private inputController: CarInputController;
 
+  private deltaTime: number;
+
   private carEngine: CarEngine;
 
   private carSteering: CarSteering;
@@ -18,19 +20,11 @@ export default class CarPhysics {
   public carDirection: Phaser.Math.Vector2;
 
   /**
-   * Velocity at which tire s traveling
-   */
-  private tireVelocity: Phaser.Math.Vector2;
-
-  /**
    * Velocity at which car traveling
    */
   private carVelocity: Phaser.Math.Vector2;
 
-  /**
-   * Net velocity
-   */
-  private netVelocity: Phaser.Math.Vector2;
+  private traction: number;
 
   constructor(
     upVector: Phaser.Math.Vector2,
@@ -41,7 +35,7 @@ export default class CarPhysics {
     this.carDirection = upVector;
 
     this.carVelocity = new Phaser.Math.Vector2(0, 0);
-    this.tireVelocity = new Phaser.Math.Vector2(0, 0);
+    this.traction = CarConfigEnum.LOWSPEED_TRACTION;
 
     this.inputController = inputController;
     this.carEngine = carEngine;
@@ -53,24 +47,14 @@ export default class CarPhysics {
   }
 
   public getVelocity(): Phaser.Math.Vector2 {
-    // return this.netVelocity;
     return this.carVelocity;
   }
 
   public update(deltaTime: number) {
-    // this.tireVelocity.add(this.netForce().scale(deltaTime));
-    // this.carVelocity = this.tireVelocity.clone().add(this.carVelocity);
-    // this.carDirection = Phaser.Math.Vector2.RIGHT;
-    if (this.angularForce().length() !== 0) {
-      this.carDirection.rotate(this.angularForce()
-        .angle() * deltaTime * this.inputController.getAxis());
-    }
+    this.deltaTime = deltaTime;
 
+    this.changeCarDirection();
     this.carVelocity.add(this.netForce().scale(deltaTime));
-
-    // console.log(this.carDirection);
-    // console.log(this.carVelocity.length());
-    // console.log(this.angularForce().angle());
   }
 
   public netForce(): Phaser.Math.Vector2 {
@@ -82,15 +66,36 @@ export default class CarPhysics {
     return velocity;
   }
 
+  private changeCarDirection(): void {
+    const frontTire = this.carVelocity.clone().rotate(this.carSteering.getTireAngleRad())
+      .add(this.carDirection.clone().scale(CarConfigEnum.WHEELBASE / 2));
+    const rearTire = this.carVelocity.clone()
+      .subtract(this.carDirection.clone().scale(CarConfigEnum.WHEELBASE / 2));
+    const newHeading = (frontTire.subtract(rearTire)).normalize();
+    this.carDirection = newHeading;
+    const dotProd = newHeading.dot(this.carVelocity.clone().normalize());
+    const looseTractionVelocity = Math.sqrt(CarConfigEnum.LOWSPEED_TRACTION * EnvironmentEnum.G * this.turnRadius());
+    if (this.carVelocity.length() >= looseTractionVelocity) {
+      this.traction = CarConfigEnum.HIGHSPEED_TRACTION;
+    } else {
+      this.traction = CarConfigEnum.LOWSPEED_TRACTION;
+    }
+    if (dotProd > 0) {
+      this.carVelocity = this.carVelocity.clone()
+        .lerp(newHeading.clone().scale(this.carVelocity.length()), this.traction * this.deltaTime);
+    } else if (dotProd < 0) {
+      this.carVelocity = newHeading.negate().scale(Math.min(this.carVelocity.length(), this.carVelocity.length() * 0.6));
+    }
+  }
+
   /**
    * Car is accelerating correspondingly to tire direction
    * @returns Acceleration force
    */
   private appliedForce(): Phaser.Math.Vector2 {
-    const direction = this.carDirection.clone();
-    // this.carDirection.clone().rotate(
-    //   this.carSteering.getTireAngleRad(),
-    // );
+    const direction = this.carDirection.clone().rotate(
+      this.carSteering.getTireAngleRad() * this.deltaTime,
+    );
     let factor = 0;
 
     if (this.inputController.isAccelerating()) {
@@ -139,6 +144,7 @@ export default class CarPhysics {
     if (turnRadius === Infinity) {
       return direction.scale(0);
     }
+
     const factor = (CarConfigEnum.CAR_MASS * vSquared) / turnRadius;
     const centripetalVector = direction.scale(factor);
     return centripetalVector;
@@ -174,17 +180,12 @@ export default class CarPhysics {
     const vSquared = this.carVelocity.dot(this.carVelocity);
     const lateralAcceleration = this.lateralForce().length() / CarConfigEnum.CAR_MASS;
     const turnRadius = vSquared / lateralAcceleration;
-    // if (turnRadius < CarConfigEnum.WHEELBASE || this.inputController.getAxis() === 0) {
-    //   turnRadius = Infinity;
-    // }
+
     return turnRadius;
-    // const theta = this.carSteering.getTireAngleRad();
-    // const turnRadius = 1 / Math.sin(theta);
-    // console.log(turnRadius);
-    // return turnRadius;
   }
 
   static normalForce(): number {
-    return CarConfigEnum.CAR_MASS * EnvironmentEnum.G;
+    return CarConfigEnum.CAR_MASS;
+    //  * EnvironmentEnum.G;
   }
 }
